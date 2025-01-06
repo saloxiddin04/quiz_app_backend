@@ -140,4 +140,48 @@ router.post('/end', async (req, res) => {
 	}
 })
 
+router.get('/review/:testId', async (req, res) => {
+	try {
+		const {testId} = req.params
+		const {index} = req.query
+		const currentIndex = parseInt(index, 10);
+		
+		if (isNaN(currentIndex) || currentIndex < 0) {
+			return res.status(400).json({ error: 'Invalid or missing index' });
+		}
+		
+		const testHistory = await TestHistory.findById(testId)
+			.populate('questions.question', 'text options correctAnswer')
+		
+		if (!testHistory) {
+			return res.status(404).json({ error: "Test history not found" })
+		}
+		
+		if (currentIndex >= testHistory.questions.length) {
+			return res.status(400).json({ error: 'Index exceeds total questions' });
+		}
+		
+		const questionReview = testHistory.questions[currentIndex];
+		const totalQuestions = testHistory.questions.length;
+		
+		res.status(200).json({
+			testId: testHistory._id,
+			userId: testHistory.user,
+			totalQuestions,
+			currentIndex,
+			question: {
+				_id: questionReview.question._id,
+				text: questionReview.question.text,
+				options: questionReview.question.options,
+				correctAnswer: questionReview.question.correctAnswer,
+				userAnswer: questionReview.userAnswer,
+				isCorrect: questionReview.isCorrect,
+			},
+			isLastQuestion: currentIndex === totalQuestions - 1,
+		});
+	} catch (e) {
+		res.status(500).json({ error: e.message })
+	}
+})
+
 module.exports = router;
