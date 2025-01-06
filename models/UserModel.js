@@ -10,6 +10,9 @@ const userSchema = new Schema({
 	verified: {
 		type: Boolean, default: false
 	},
+	verificationCode: {
+		type: String, select: false
+	},
 	verificationCodeValidation: {
 		type: Number, select: false
 	},

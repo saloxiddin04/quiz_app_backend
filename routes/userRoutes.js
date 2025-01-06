@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 const User = require('../models/UserModel')
 const jwt = require('jsonwebtoken')
-const {signupSchema} = require("../middlewares/validator");
+const {signupSchema, acceptCodeSchema} = require("../middlewares/validator");
 const {hash, compare} = require('bcryptjs')
 const {createHmac} = require('crypto')
 const transport = require('../middlewares/sendMail')
@@ -110,7 +110,55 @@ router.patch('/send-verification-code', async (req, res) => {
 		
 		return res.status(400).json({success: true, message: "Code sent failed!"})
 	} catch (e) {
-	
+		res.status(500).json({error: e.message})
+	}
+})
+
+router.patch('/verify-code', async (req, res) => {
+	try {
+		const {email, providedCode} = req.body;
+		const {error, value} = acceptCodeSchema.validate({email, providedCode})
+		
+		if (error) {
+			return res.status(401).json({success: false, message: error.details[0].message})
+		}
+		
+		const codeValue = providedCode.toString()
+		const existingUser = await User.findOne({ email }).select(
+			'+verificationCode +verificationCodeValidation'
+		);
+		if (!existingUser) {
+			return res.status(401).json({success: false, message: 'User does not exists!'})
+		}
+		
+		if (existingUser.verfied) {
+			return res.status(400).json({success: false, message: "You are already verified!"})
+		}
+		
+		if (
+			!existingUser.verificationCode ||
+			!existingUser.verificationCodeValidation
+		) {
+			return res.status(400).json({success: false, message: "Something is wrong with the code"})
+		}
+		
+		if (Date.now() - existingUser.verificationCodeValidation > 5 * 60 * 1000) {
+			return res.status(400).json({success: false, message: "Code has been expired!"})
+		}
+		
+		const hashedCodeValue = createHmac('sha256', process.env.HMAC_VERIFICATION_CODE).update(codeValue).digest('hex')
+		if (hashedCodeValue === existingUser.verificationCode) {
+			existingUser.verfied = true
+			existingUser.verificationCode = undefined
+			existingUser.verificationCodeValidation = undefined
+			
+			await existingUser.save()
+			return res.status(200).json({success: false, message: "Your account has been verified!"})
+		}
+		
+		return res.status(400).json({success: false, message: "Something went wrong!"})
+	} catch (e) {
+		res.status(500).json({error: e.message})
 	}
 })
 
