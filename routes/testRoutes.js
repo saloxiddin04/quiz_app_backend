@@ -3,9 +3,10 @@ const Question = require('../models/QuestionModel')
 const TestHistory = require('../models/TestHistoryModel')
 const router = express.Router();
 
-router.post('/start', async (req, res) => {
+router.get('/start', async (req, res) => {
 	try {
-		const { userId, subjectId, limit } = req.body;
+		// params
+		const { userId, subjectId, limit } = req.query;
 		
 		const questions = await Question.find({ subject: subjectId }).limit(limit)
 		
@@ -14,22 +15,22 @@ router.post('/start', async (req, res) => {
 			subject: subjectId,
 			questions: questions?.map((q) => ({ question: q?._id }))
 		})
-		await TestHistory.save(testHistory)
+		await testHistory.save(testHistory)
 		
 		res.status(200).json({
 			testId: testHistory?._id,
 			question: questions[0]
 		})
 	} catch (e) {
-		res.status(500).json({ error: err.message });
+		res.status(500).json({ error: e.message });
 	}
 })
 
 router.post('/submit', async (req, res) => {
 	try {
-		const { testId, answer } = req.body;
+		const { testId, answer, userId } = req.body;
 		
-		const testHistory = await TestHistory.findById(testId).populate('questions.question');
+		const testHistory = await TestHistory.findOne({_id: testId, user: userId}).populate('questions.question');
 		
 		if (!testHistory) {
 			return res.status(404).json({ error: 'Test not found' });
@@ -64,7 +65,11 @@ router.post('/submit', async (req, res) => {
 			message: isCompleted ? 'Test completed' : 'Answer submitted successfully',
 			nextQuestion: isCompleted
 				? null
-				: testHistory.questions[testHistory.currentQuestionIndex].question, // Send the next question if not completed
+				: {
+					_id: testHistory.questions[testHistory.currentQuestionIndex].question._id,
+					text: testHistory.questions[testHistory.currentQuestionIndex].question.text,
+					options: testHistory.questions[testHistory.currentQuestionIndex].question.options
+				},
 			isCompleted,
 			score: testHistory.score,
 		});
@@ -73,7 +78,7 @@ router.post('/submit', async (req, res) => {
 	}
 })
 
-router.post('/history/:userId', async (req, res) => {
+router.get('/history/:userId', async (req, res) => {
 	try {
 		const {userId} = req.params
 		
@@ -91,3 +96,5 @@ router.post('/history/:userId', async (req, res) => {
 		res.status(500).json({ error: e.message });
 	}
 })
+
+module.exports = router;

@@ -9,6 +9,7 @@ dotenv.config();
 const subjectRoutes = require('./routes/subjectRoutes');
 const questionRoutes = require('./routes/questionRoutes');
 const testRoutes = require('./routes/testRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
@@ -19,7 +20,8 @@ app.use(cors());
 
 app.use('/subjects', subjectRoutes);
 app.use('/questions', questionRoutes);
-// app.use('/tests', testRoutes);
+app.use('/tests', testRoutes);
+app.use('/user', userRoutes);
 
 const PORT = process.env.PORT || 8080
 
