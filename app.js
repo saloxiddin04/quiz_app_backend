@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const cookieParser = require('cookie-parser')
+const helmet = require('helmet');
 
 dotenv.config();
 
@@ -16,7 +18,9 @@ const app = express();
 const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(bodyParser.json());
+app.use(helmet());
 app.use(cors());
+app.use(cookieParser())
 
 app.use('/subjects', subjectRoutes);
 app.use('/questions', questionRoutes);
