@@ -97,4 +97,47 @@ router.get('/history/:userId', async (req, res) => {
 	}
 })
 
+router.post('/end', async (req, res) => {
+	try {
+		const { userId, testId } = req.body
+		
+		const testHistory = await TestHistory.findOne({ _id: testId, user: userId }).populate('questions.question')
+		
+		if (!testHistory) {
+			return res.status(404).json({ error: 'Test not found' })
+		}
+		
+		if (testHistory?.currentQuestionIndex >= testHistory?.questions?.length) {
+			return res.status(400).json({ message: 'Test is already completed.' });
+		}
+		
+		for(let i = testHistory?.currentQuestionIndex; i < testHistory?.questions?.length; i++) {
+			if (testHistory.questions[i]) { // Check if the question exists
+				testHistory.questions[i].userAnswer = null;
+				testHistory.questions[i].isCorrect = false;
+			}
+		}
+		
+		// Finalize the test
+		testHistory.currentQuestionIndex = testHistory.questions.length; // Mark as completed
+		await testHistory.save();
+		
+		res.status(200).json({
+			message: 'Test ended successfully.',
+			testId: testHistory._id,
+			totalQuestions: testHistory.questions.length,
+			score: testHistory.score,
+			questions: testHistory.questions.map((q) => ({
+				questionId: q.question._id,
+				text: q.question.text,
+				correctAnswer: q.question.correctAnswer,
+				userAnswer: q.userAnswer,
+				isCorrect: q.isCorrect,
+			})),
+		});
+	} catch (e) {
+		res.status(500).json({error: e.message})
+	}
+})
+
 module.exports = router;
