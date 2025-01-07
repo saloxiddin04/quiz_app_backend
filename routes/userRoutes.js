@@ -6,6 +6,7 @@ const {signupSchema, acceptCodeSchema} = require("../middlewares/validator");
 const {hash, compare} = require('bcryptjs')
 const {createHmac} = require('crypto')
 const transport = require('../middlewares/sendMail')
+const {identifier} = require("../middlewares/identification");
 
 router.post('/signUp', async (req, res) => {
 	try {
@@ -78,7 +79,7 @@ router.post('/signIn', async (req, res) => {
 	}
 })
 
-router.patch('/send-verification-code', async (req, res) => {
+router.patch('/send-verification-code', identifier, async (req, res) => {
 	try {
 		const {email} = req.body;
 		
@@ -114,7 +115,7 @@ router.patch('/send-verification-code', async (req, res) => {
 	}
 })
 
-router.patch('/verify-code', async (req, res) => {
+router.patch('/verify-code', identifier, async (req, res) => {
 	try {
 		const {email, providedCode} = req.body;
 		const {error, value} = acceptCodeSchema.validate({email, providedCode})
@@ -162,7 +163,7 @@ router.patch('/verify-code', async (req, res) => {
 	}
 })
 
-router.post('/logout', async (req, res) => {
+router.post('/logout', identifier, async (req, res) => {
 	res.clearCookie('Authorization').status(200).json({success: true, message: "logged out successfully"})
 })
 
