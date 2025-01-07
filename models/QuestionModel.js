@@ -5,7 +5,8 @@ const questionSchema = new Schema({
 	text: { type: String, required: true },
 	options: { type: [String], required: true },
 	correctAnswer: { type: String, required: true },
-	imagePath: { type: String, default: null }
+	imagePath: { type: String, default: null },
+	correctAnswerImg: { type: String, default: null }
 })
 
 module.exports = model('Question', questionSchema)

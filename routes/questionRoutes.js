@@ -3,17 +3,20 @@ const Question = require('../models/QuestionModel')
 const upload = require('../middlewares/multer')
 const router = express.Router();
 
-router.post('/create', upload.single('image'), async (req, res) => {
+router.post('/create', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'correctAnswerImg', maxCount: 1 }]), async (req, res) => {
 	try {
 		const {subject, text, options, correctAnswer} = req.body
-		const imagePath = req.file ? req.file.path : null
+		const image = req.files['image'] ? req.files['image'][0].path : null;
+		const correctAnswerImg = req.files['correctAnswerImg'] ? req.files['correctAnswerImg'][0].path : null;
+		
 		const question = new Question({
 			subject,
 			text,
 			// options,
 			options: JSON.parse(options),
 			correctAnswer,
-			imagePath
+			imagePath: image,
+			correctAnswerImg
 		})
 
 		await question.save()
