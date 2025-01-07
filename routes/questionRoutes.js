@@ -4,6 +4,27 @@ const upload = require('../middlewares/multer')
 const fs = require('fs')
 const router = express.Router();
 
+router.get('/', async (req, res) => {
+	try {
+		const {limit} = req.query
+		const limitNum = limit ? parseInt(limit, 10) : null;
+		
+		const questions = limitNum
+			? await Question.find().limit(limitNum).sort({createdAt: -1})
+			: await Question.find().sort({createdAt: -1})
+		
+		const totalQuestions = await Question.countDocuments()
+		
+		res.status(200).json({
+			success: true,
+			data: questions,
+			count: totalQuestions
+		})
+	} catch (e) {
+		res.status(500).json({ error: e.message });
+	}
+})
+
 router.post('/create', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'correctAnswerImg', maxCount: 1 }]), async (req, res) => {
 	try {
 		const {subject, text, options, correctAnswer} = req.body
