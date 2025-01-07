@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router()
 const User = require('../models/UserModel')
 const jwt = require('jsonwebtoken')
-const {signupSchema, acceptCodeSchema} = require("../middlewares/validator");
+const {signupSchema, acceptCodeSchema, changePasswordSchema, acceptFPCodeSchema} = require("../middlewares/validator");
 const {hash, compare} = require('bcryptjs')
 const {createHmac} = require('crypto')
 const transport = require('../middlewares/sendMail')
@@ -60,9 +60,9 @@ router.post('/signIn', async (req, res) => {
 		}
 		
 		const token = jwt.sign({
-			userId: existUser?._id,
-			email: existUser?.email,
-			verified: existUser?.verified
+			userId: existUser._id,
+			email: existUser.email,
+			verified: existUser.verified
 		}, process.env.TOKEN_SECRET)
 		
 		res.cookie('Authorization', 'Bearer ' + token, {
@@ -132,7 +132,7 @@ router.patch('/verify-code', identifier, async (req, res) => {
 			return res.status(401).json({success: false, message: 'User does not exists!'})
 		}
 		
-		if (existingUser.verfied) {
+		if (existingUser.verified) {
 			return res.status(400).json({success: false, message: "You are already verified!"})
 		}
 		
@@ -149,12 +149,12 @@ router.patch('/verify-code', identifier, async (req, res) => {
 		
 		const hashedCodeValue = createHmac('sha256', process.env.HMAC_VERIFICATION_CODE).update(codeValue).digest('hex')
 		if (hashedCodeValue === existingUser.verificationCode) {
-			existingUser.verfied = true
+			existingUser.verified = true
 			existingUser.verificationCode = undefined
 			existingUser.verificationCodeValidation = undefined
 			
 			await existingUser.save()
-			return res.status(200).json({success: false, message: "Your account has been verified!"})
+			return res.status(200).json({success: true, message: "Your account has been verified!"})
 		}
 		
 		return res.status(400).json({success: false, message: "Something went wrong!"})
@@ -165,6 +165,135 @@ router.patch('/verify-code', identifier, async (req, res) => {
 
 router.post('/logout', identifier, async (req, res) => {
 	res.clearCookie('Authorization').status(200).json({success: true, message: "logged out successfully"})
+})
+
+router.patch('/change-password', identifier,  async (req, res) => {
+	try {
+		const {userId, verified} = req.user
+		const {oldPassword, newPassword} = req.body
+		
+		const {error, value} = changePasswordSchema.validate({oldPassword, newPassword})
+		if (error) {
+			return res.status(401).json({success: false, message: error.details[0].message})
+		}
+		
+		console.log(req.user)
+		
+		if (!verified) {
+			res.status(400).json({ success: false, message: "You are not verified user!" })
+		}
+		
+		const existUser = await User.findOne({_id: userId}).select('+password')
+		if (!existUser) {
+			res.status(401).json({ success: false, message: "User does not exists!" })
+		}
+		
+		const result = await compare(oldPassword, existUser.password)
+		if (!result) {
+			return res.status(400).json({error: 'Invalid credentials!'});
+		}
+
+		existUser.password = await hash(newPassword, 12)
+		await existUser.save()
+		
+		return res.status(200).json({success: true, message: "Password updated!"})
+	} catch (e) {
+		res.status(500).json({error: e.message})
+	}
+})
+
+router.patch('/send-forgot-password-code', async (req, res) => {
+	try {
+		const { email } = req.body;
+		const existingUser = await User.findOne({ email });
+		if (!existingUser) {
+			return res
+				.status(404)
+				.json({ success: false, message: 'User does not exists!' });
+		}
+		
+		const codeValue = Math.floor(Math.random() * 1000000).toString();
+		let info = await transport.sendMail({
+			from: process.env.NODE_CODE_SENDING_EMAIL_ADDRESS,
+			to: existingUser.email,
+			subject: 'Forgot password code',
+			html: '<h1>' + codeValue + '</h1>',
+		});
+		
+		if (info.accepted[0] === existingUser.email) {
+			const hashedCodeValue = createHmac('sha256', process.env.HMAC_VERIFICATION_CODE).update(codeValue).digest('hex')
+			existingUser.forgotPasswordCode = hashedCodeValue;
+			existingUser.forgotPasswordCodeValidation = Date.now();
+			await existingUser.save();
+			return res.status(200).json({ success: true, message: 'Code sent!' });
+		}
+		res.status(400).json({ success: false, message: 'Code sent failed!' });
+	} catch (e) {
+		res.status(500).json({success: false, error: e.message})
+	}
+})
+
+router.patch('/verify-forgot-password-code', async (req, res) => {
+	try {
+		const { email, providedCode, newPassword } = req.body;
+		const { error, value } = acceptFPCodeSchema.validate({
+			email,
+			providedCode,
+			newPassword,
+		});
+		if (error) {
+			return res
+				.status(401)
+				.json({ success: false, message: error.details[0].message });
+		}
+		
+		const codeValue = providedCode.toString();
+		const existingUser = await User.findOne({ email }).select(
+			'+forgotPasswordCode +forgotPasswordCodeValidation'
+		);
+		
+		if (!existingUser) {
+			return res
+				.status(401)
+				.json({ success: false, message: 'User does not exists!' });
+		}
+		
+		if (
+			!existingUser.forgotPasswordCode ||
+			!existingUser.forgotPasswordCodeValidation
+		) {
+			return res
+				.status(400)
+				.json({ success: false, message: 'something is wrong with the code!' });
+		}
+		
+		if (
+			Date.now() - existingUser.forgotPasswordCodeValidation >
+			5 * 60 * 1000
+		) {
+			return res
+				.status(400)
+				.json({ success: false, message: 'code has been expired!' });
+		}
+		
+		const hashedCodeValue = createHmac('sha256', process.env.HMAC_VERIFICATION_CODE).update(codeValue).digest('hex')
+		
+		if (hashedCodeValue === existingUser.forgotPasswordCode) {
+			const hashedPassword = await hash(newPassword, 12);
+			existingUser.password = hashedPassword;
+			existingUser.forgotPasswordCode = undefined;
+			existingUser.forgotPasswordCodeValidation = undefined;
+			await existingUser.save();
+			return res
+				.status(200)
+				.json({ success: true, message: 'Password updated!!' });
+		}
+		return res
+			.status(400)
+			.json({ success: false, message: 'unexpected occured!!' });
+	} catch (e) {
+		res.status(500).json({success: false, error: e.message})
+	}
 })
 
 module.exports = router;
