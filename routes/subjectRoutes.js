@@ -14,4 +14,20 @@ router.post('/create', async (req, res) => {
 	}
 })
 
+router.delete('/:id', async (req, res) => {
+	try {
+		const {id} = req.params
+		
+		const existSubject = await Subject.findOne({_id: id})
+		if (!existSubject) {
+			res.status(400).json({success: false, message: 'Subject not found!'})
+		}
+		
+		await Subject.deleteOne({_id: id})
+		res.status(204).json({ success: true, message: "Deleted!" })
+	} catch (e) {
+		res.status(500).json({error: e.message})
+	}
+})
+
 module.exports = router
