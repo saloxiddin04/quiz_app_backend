@@ -53,6 +53,43 @@ router.post('/create', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'c
 	}
 })
 
+router.patch('/:id', async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { subject, text, options, correctAnswer } = req.body;
+		
+		const question = await Question.findById({_id: id})
+		if (!question) {
+			res.status(404).json({success: false, message: "Question not found!"})
+		}
+		
+		// Update question fields
+		if (subject) question.subject = subject;
+		if (text) question.text = text;
+		if (options) question.options = JSON.parse(options);
+		if (correctAnswer) question.correctAnswer = correctAnswer;
+		
+		// Handle file replacements
+		if (req.files['image']) {
+			if (question.imagePath && fs.existsSync(question.imagePath)) {
+				fs.unlinkSync(question.imagePath); // Remove old image
+			}
+			question.imagePath = req.files['image'][0].path;
+		}
+		if (req.files['correctAnswerImg']) {
+			if (question.correctAnswerImg && fs.existsSync(question.correctAnswerImg)) {
+				fs.unlinkSync(question.correctAnswerImg); // Remove old correctAnswerImg
+			}
+			question.correctAnswerImg = req.files['correctAnswerImg'][0].path;
+		}
+		
+		await question.save();
+		res.status(200).json({ success: true, message: 'Question updated successfully', question });
+	} catch (e) {
+		res.status(500).json({ error: e.message });
+	}
+})
+
 router.delete('/:id', async (req, res) => {
 	try {
 		const { id } = req.params;
