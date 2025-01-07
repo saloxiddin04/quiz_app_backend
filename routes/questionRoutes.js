@@ -1,6 +1,7 @@
 const express = require('express')
 const Question = require('../models/QuestionModel')
 const upload = require('../middlewares/multer')
+const fs = require('fs')
 const router = express.Router();
 
 router.post('/create', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'correctAnswerImg', maxCount: 1 }]), async (req, res) => {
@@ -21,6 +22,29 @@ router.post('/create', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'c
 
 		await question.save()
 		res.status(201).json(question)
+	} catch (e) {
+		res.status(500).json({ error: e.message });
+	}
+})
+
+router.delete('/:id', async (req, res) => {
+	try {
+		const { id } = req.params;
+		const existQuestion = await Question.findById({_id: id});
+		if (!existQuestion) {
+			return res.status(404).json({ success: false, message: 'Question not found' });
+		}
+		
+		// Delete files if they exist
+		if (existQuestion.imagePath && fs.existsSync(existQuestion.imagePath)) {
+			fs.unlinkSync(existQuestion.imagePath);
+		}
+		if (existQuestion.correctAnswerImg && fs.existsSync(existQuestion.correctAnswerImg)) {
+			fs.unlinkSync(existQuestion.correctAnswerImg);
+		}
+		
+		await existQuestion.deleteOne();
+		res.status(200).json({ success: true, message: 'Question deleted successfully' });
 	} catch (e) {
 		res.status(500).json({ error: e.message });
 	}
