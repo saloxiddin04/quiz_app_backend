@@ -64,10 +64,10 @@ router.post('/create', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'c
 	}
 })
 
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'correctAnswerImg', maxCount: 1 }]),  async (req, res) => {
 	try {
 		const { id } = req.params;
-		const { subject, text, options, correctAnswer } = req.body;
+		const { subject, text, options, correctAnswer } = req?.body;
 		
 		const question = await Question.findById({_id: id})
 		if (!question) {
@@ -81,17 +81,17 @@ router.patch('/:id', async (req, res) => {
 		if (correctAnswer) question.correctAnswer = correctAnswer;
 		
 		// Handle file replacements
-		if (req.files['image']) {
-			if (question.imagePath && fs.existsSync(question.imagePath)) {
-				fs.unlinkSync(question.imagePath); // Remove old image
+		if (req?.files && req?.files['image']) {
+			if (question?.imagePath && fs.existsSync(question.imagePath)) {
+				fs.unlinkSync(question?.imagePath); // Remove old image
 			}
-			question.imagePath = req.files['image'][0].path;
+			question.imagePath = req?.files['image'][0]?.path;
 		}
-		if (req.files['correctAnswerImg']) {
+		if (req?.files && req?.files['correctAnswerImg']) {
 			if (question.correctAnswerImg && fs.existsSync(question.correctAnswerImg)) {
 				fs.unlinkSync(question.correctAnswerImg); // Remove old correctAnswerImg
 			}
-			question.correctAnswerImg = req.files['correctAnswerImg'][0].path;
+			question.correctAnswerImg = req?.files['correctAnswerImg'][0]?.path;
 		}
 		
 		await question.save();
