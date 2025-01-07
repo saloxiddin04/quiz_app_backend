@@ -2,6 +2,15 @@ const express = require('express')
 const Subject = require('../models/SubjectModel')
 const router = express.Router();
 
+router.get('/', async (req, res) => {
+	try {
+		const result = await Subject.find()
+		return res.status(200).json({ success: true, data: result })
+	} catch (e) {
+		res.status(500).json({error: e.message})
+	}
+})
+
 router.post('/create', async (req, res) => {
 	try {
 		const {name} = req.body
