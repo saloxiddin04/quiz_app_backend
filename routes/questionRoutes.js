@@ -6,12 +6,17 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
 	try {
-		const {limit} = req.query
-		const limitNum = limit ? parseInt(limit, 10) : null;
+		const { page = 1, limit = 10 } = req.query;
+		const pageNum = parseInt(page, 10);
+		const limitNum = parseInt(limit, 10);
 		
-		const questions = limitNum
-			? await Question.find().limit(limitNum).sort({createdAt: -1})
-			: await Question.find().sort({createdAt: -1})
+		const query = {};
+		
+		// Execute the query with pagination (skip and limit)
+		const questions = await Question.find(query)
+			.skip((pageNum - 1) * limitNum)
+			.limit(limitNum)
+			.sort({ createdAt: -1 });
 		
 		const totalQuestions = await Question.countDocuments()
 		
