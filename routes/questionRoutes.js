@@ -30,6 +30,17 @@ router.get('/', async (req, res) => {
 	}
 })
 
+router.get('/:id', async (req, res) => {
+	try {
+		const {id} = req.params
+		
+		const result = await Question.findById({_id: id})
+		res.status(200).json({success: true, data: result})
+	} catch (e) {
+		res.status(500).json({ error: e.message });
+	}
+})
+
 router.post('/create', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'correctAnswerImg', maxCount: 1 }]), async (req, res) => {
 	try {
 		const {subject, text, options, correctAnswer} = req.body
