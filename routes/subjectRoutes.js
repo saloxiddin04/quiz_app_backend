@@ -1,11 +1,22 @@
 const express = require('express')
 const Subject = require('../models/SubjectModel')
+const Question = require('../models/QuestionModel')
 const router = express.Router();
 
 router.get('/', async (req, res) => {
 	try {
-		const result = await Subject.find()
-		return res.status(200).json({ success: true, data: result })
+		const subjects = await Subject.find({}, 'name')
+		const questions = await Question.find({}, 'subject')
+		
+		const questionCounts = subjects.map(subject => {
+			const count = questions.filter(q => q.subject.toString() === subject._id.toString()).length;
+			return {
+				subject: subject.name,
+				count: count
+			};
+		});
+		
+		res.status(200).json({ success: true, data: questionCounts });
 	} catch (e) {
 		res.status(500).json({error: e.message})
 	}
