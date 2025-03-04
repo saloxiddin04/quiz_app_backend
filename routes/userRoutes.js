@@ -65,8 +65,6 @@ router.post('/signIn', async (req, res) => {
 			verified: existUser.verified
 		}, process.env.TOKEN_SECRET)
 
-		console.log(existUser)
-		
 		res.cookie('Authorization', 'Bearer ' + token, {
 			expires: new Date(Date.now() * 8 + 3600000),
 			httpOnly: process.env.NODE_ENV === 'production',
