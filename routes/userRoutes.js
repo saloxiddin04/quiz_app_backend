@@ -64,6 +64,8 @@ router.post('/signIn', async (req, res) => {
 			email: existUser.email,
 			verified: existUser.verified
 		}, process.env.TOKEN_SECRET)
+
+		console.log(existUser)
 		
 		res.cookie('Authorization', 'Bearer ' + token, {
 			expires: new Date(Date.now() * 8 + 3600000),
@@ -72,6 +74,11 @@ router.post('/signIn', async (req, res) => {
 		}).json({
 			message: "Logged in successfully",
 			token,
+			user: {
+				id: existUser?._id,
+				email: existUser?.email,
+				verified: existUser?.verified
+			},
 			success: true
 		})
 	} catch (e) {
