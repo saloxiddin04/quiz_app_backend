@@ -12,6 +12,7 @@ router.get('/', async (req, res) => {
 			const count = questions.filter(q => q.subject.toString() === subject._id.toString()).length;
 			return {
 				subject: subject.name,
+				id: subject._id,
 				count: count
 			};
 		});
