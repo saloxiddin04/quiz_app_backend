@@ -7,6 +7,7 @@ const userSchema = new Schema({
 	password: {
 		type: String, required: [true, 'Password is required'], trim: true, select: false
 	},
+	role: { type: String, default: "student" },
 	verified: {
 		type: Boolean, default: false
 	},

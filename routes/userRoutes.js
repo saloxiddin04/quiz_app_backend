@@ -64,7 +64,7 @@ router.post('/signIn', async (req, res) => {
 			email: existUser.email,
 			verified: existUser.verified
 		}, process.env.TOKEN_SECRET)
-
+		
 		res.cookie('Authorization', 'Bearer ' + token, {
 			expires: new Date(Date.now() * 8 + 3600000),
 			httpOnly: process.env.NODE_ENV === 'production',
@@ -75,7 +75,8 @@ router.post('/signIn', async (req, res) => {
 			user: {
 				id: existUser?._id,
 				email: existUser?.email,
-				verified: existUser?.verified
+				verified: existUser?.verified,
+				role: existUser?.role
 			},
 			success: true
 		})
@@ -202,6 +203,23 @@ router.patch('/change-password', identifier,  async (req, res) => {
 		await existUser.save()
 		
 		return res.status(200).json({success: true, message: "Password updated!"})
+	} catch (e) {
+		res.status(500).json({error: e.message})
+	}
+})
+
+router.patch('/update-role', identifier, async (req, res) => {
+	try {
+		const {role, _id} = req.body
+		const updatedUser = await User.findOne({_id})
+		
+		if (!updatedUser) {
+			res.status(400).json({ success: false, message: "User does not exists!" })
+		}
+		
+		updatedUser.role = role
+		await updatedUser.save()
+		return res.status(200).json({success: true, message: "Role updated!"})
 	} catch (e) {
 		res.status(500).json({error: e.message})
 	}
