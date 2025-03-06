@@ -14,6 +14,9 @@ router.get('/', async (req, res) => {
 		
 		// Execute the query with pagination (skip and limit)
 		const questions = await Question.find(query)
+			.populate({
+				path: "subject"
+			})
 			.skip((pageNum - 1) * limitNum)
 			.limit(limitNum)
 			.sort({ createdAt: -1 });
