@@ -50,8 +50,6 @@ router.post('/create', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'c
 		const image = req.files['image'] ? req.files['image'][0].path : null;
 		const correctAnswerImg = req.files['correctAnswerImg'] ? req.files['correctAnswerImg'][0].path : null;
 
-		console.log(options)
-
 		const parsedOptions = typeof options === "string" ? JSON.parse(options) : options;
 		
 		const question = new Question({
