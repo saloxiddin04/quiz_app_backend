@@ -46,7 +46,7 @@ router.get('/:id', async (req, res) => {
 
 router.post('/create', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'correctAnswerImg', maxCount: 1 }]), async (req, res) => {
 	try {
-		const {subject, text, options, correctAnswer} = req.body
+		const {subject, text, options, correctAnswer, explanation} = req.body
 		const image = req.files['image'] ? req.files['image'][0].path : null;
 		const correctAnswerImg = req.files['correctAnswerImg'] ? req.files['correctAnswerImg'][0].path : null;
 		
@@ -57,7 +57,8 @@ router.post('/create', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'c
 			options: JSON.parse(options),
 			correctAnswer,
 			imagePath: image,
-			correctAnswerImg
+			correctAnswerImg,
+			explanation
 		})
 
 		await question.save()
